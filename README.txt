@@ -10,9 +10,10 @@ Several parameters can be changed easily in the beginning of the script main.m.
 
 ## References
 
-1. Resseguier, V., Pan, W., & Fox-Kemper, B. (2020a, in press). Data-driven versus selfsimilar parameterizations for Stochastic Advection by Lie Transport and Location Uncertainty. Nonlinear Processes in Geophysics.
+1. Resseguier, V., Pan, W., & Fox-Kemper, B. (2020a). Data-driven versus selfsimilar parameterizations for Stochastic Advection by Lie Transport and Location Uncertainty. Nonlinear Processes in Geophysics.
+https://doi.org/10.5194/npg-27-209-2020 
 2. Resseguier, V., Mémin, E., & Chapron, B. (2017b). Geophysical flows under location uncertainty, Part II. Quasi-geostrophy and efficient ensemble spreading. Geophysical & Astrophysical Fluid Dynamics, 111(3), 177-208.
-
+https://doi.org/10.1080/03091929.2017.1312101 
 
 ## Resources / contact
 
