@@ -31,7 +31,8 @@ heighttemp = 6;
 set(figure8,'Units','inches', ...
     'Position',[X0(1) X0(2) widthtemp heighttemp], ...
     'PaperPositionMode','auto');
-model.sigma.km_LS = model.sigma.km_LS(id_part);
+model.sigma.km_LS = 2*model.grid.k.d_kappa;
+% model.sigma.km_LS = model.sigma.km_LS(id_part);
 epsi2 = fct_epsilon_k( model,fft_b_adv_part(:,:,:,id_part),day);
 %    int_epsilon_dt_m_1,'b');
 set(gca,'XGrid','on','XTickMode','manual');

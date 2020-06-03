@@ -1,617 +1,69 @@
-function main(stochastic_simulation,type_data,resolution,forcing, ...
-    sigma,Lap_visco,HV,Smag,advection_duration)
-% Main function to Launch the code
-%
-
 %%%%%%%%%%%%%%%%%%%%
 %%% Main
 %%%%%%%%%%%%%%%%%%%%
-if nargin == 0
-    init;
-end
+init;
 
-% Choose to plot
-% if nargin > 0
-%     plots_bool = false;
-% else
-    plots_bool = true;
-% end
+% Enable plots or not
+plots_bool = true;
 
 %% Main parameters to choose
 
-%% Type of flow
+%% Flow simulation parameters
 
 % Type of dynamics
 dynamics = 'SQG';
-%dynamics = '2D';
+%dynamics = '2D'; % Not tested. To use at your own risk
 
+% Duration of the simulation (in seconds)
+advection_duration = 3600*24*20; % 20 days
 
-bool_parfor = false
-bool_mat = true
-if bool_mat & bool_parfor
-    error('No compatible');
-end
+% Resolution
+resolution = 128;
+% The number of grid point is resolution^2
+% It has to be an even integer
 
-if nargin == 0
-    
-    % Duration of the simulation (in seconds)
-%     advection_duration = 3600*24*1;
-    % advection_duration = 3600*24*130;
-    %advection_duration = 3600*24*1000;
-%     advection_duration = 3600*24*16; % 20 days
-    advection_duration = 3600*24*20; % 20 days
-    
-%     bool_parfor = false
-%     bool_mat = true
-%     if bool_mat & bool_parfor
-%         error('No compatible');
-%     end
-    
-    % Type of initial condtions
-    type_data ='Spectrum';
-    % 'disym_Vortices' : 2 large dysymmetric  anticyclones and cyclones
-    % 'Vortices' : 2 large anticyclones and 2 large cyclones
-    %   (used in "Geophysical flow under location uncertainty", Resseguier V.,
-    %    Memin E., Chapron B.)
-    % 'Vortices2' : same as 'Vortices' but properly periodized (by Pierre Derian).
-    % 'Perturbed_vortices' : Same flow with slight small-scale modifications
-    %   (used in "Chaotic transitions and location uncertainty in geophysical
-    %    fluid flows", Resseguier V., Memin E., Chapron B.)
-    % 'Spectrum' : Gaussian random field with a spectrum slope deined by
-    %   the variable slop_b_ini (default value  = -5/3)
-    % 'Zero' : Field equal to zero everywhere
-    % 'Constantin_case1'
-    % 'Constantin_case2'
-    
-    % Resolution
-%     resolution = 64;
-%         resolution = 128;
-    % resolution = 256;
-    resolution = 512;
-%     resolution = 1024;
-    % resolution = 2048;
-    
-    % The number of grid point is resolution^2
-    % It has to be an even integer
-    
-    % Forcing
-    
-    % Forcing or not
-    forcing = false;
-    % If yes, there is a forcing
-    % F = ampli_forcing * odg_b * 1/T_caract * sin( 2 freq_f pi y/L_y)
-    % % If yes, there is an additionnal velocity V = (0 Vy)
-    % % with Vy = ampli_forcing * odg_b *  sin( 2 freq_f pi y/L_y)
-end
+% Reference resolution
+resolution_HR = 8 * resolution % for post processing plots
 
-% Type de forcing
-% forcing_type = 'Kolmogorov';
-forcing_type = 'Spring';
+%% Initial condition
 
-% Amplitude of the forcing
-ampli_forcing = 10;
-% ampli_forcing = 1;
+% Type of initial condtion
+type_data ='Constantin_case2' % 
+% %     case 2 of Constantin et al., 1994,
+% %         https://doi.org/10.1088/0951-7715/7/6/001
+% %     used in Resseguier et al., 2020a,
+% %         https://doi.org/10.5194/npg-27-209-2020
+% type_data = 'disym_Vortices' %
+% %     2 large dysymmetric  anticyclones and cyclones
+% %     used in Resseguier et al., 2020a, 
+% %         https://doi.org/10.5194/npg-27-209-2020
+% type_data = 'Vortices' 
+% %     2 large anticyclones and 2 large cyclones
+% %     used in Resseguier et al., 2017b, 
+% %         https://doi.org/10.1080/03091929.2017.1312101 
+% %     and Resseguier et al., 2020b, 
+% %         https://doi.org/10.1007/s11831-020-09437-x 
+% type_data ='Vortices2' 
+% %     same as 'Vortices' but properly periodized (by Pierre Derian).
+% type_data ='Perturbed_vortices' 
+% %     Same flow with slight small-scale modifications
+% %     used in Resseguier et al., 2020b, 
+% %         https://doi.org/10.1007/s11831-020-09437-x 
+% type_data ='Spectrum' 
+% %     Gaussian random field with a spectrum slope deined by
+% %     the variable slop_b_ini (default value  = -5/3)
+% %     used in Resseguier et al., 2020b, 
+% %         https://doi.org/10.1007/s11831-020-09437-x 
+% type_data ='Constantin_case1' 
+% %     case 1 of Constantin et al., 1994, 
+% %         https://doi.org/10.1088/0951-7715/7/6/001
+% type_data ='Zero' 
+% %     Field equal to zero everywhere
 
-% Frequency of the forcing
-freq_f = [3 2];
-% freq_f = [0 1];
-
-%%
-
-
-if nargin == 0
-    
-    % Deterministic or random model
-    stochastic_simulation = false;
-    sigma.sto = stochastic_simulation;
-    % Usual SQG model (stochastic_simulation=false)
-    % or SQG_MU model (stochastic_simulation=true)
-    
-    if sigma.sto
-        % Type of spectrum for sigma dBt
-%         sigma.type_spectrum = 'Band_Pass_w_Slope'; % as in GAFD part II
-        % sigma.type_spectrum = 'Low_Pass_w_Slope';
-        % Spectrum cst for k<km ans slope for k>km
-        % sigma.type_spectrum = 'Low_Pass_streamFct_w_Slope';
-        % Matern covariance for the streamfunction
-        % spectrum = cst. * k2 .* ( 1 + (k/km)^2 )^slope )
-        % ~ k2 for k<km ans slope for k>km
-        % sigma.type_spectrum = 'BB';
-        % sigma.type_spectrum = 'Bidouille';
-%         sigma.type_spectrum = 'EOF';
-        %         sigma.type_spectrum = 'Euler_EOF';
-        sigma.type_spectrum = 'SelfSim_from_LS'
-        %  Sigma computed from self similarities from the large scales
-        % sigma.type_spectrum = type_spectrum;
-        
-        % Homogeneous dissipation associated with the spectrum slope
-        sigma.assoc_diff = false;
-        
-        % Smagorinsky-like control of dissipation
-        sigma.Smag.bool = false;
-        
-        %     % Sigma computed from self similarities from the large scales
-        %     sigma.SelfSim_from_LS.bool = true;
-        
-        %     if sigma.SelfSim_from_LS.bool
-        %         % Sigma computed from a energy of absolute diffusivity spectrum
-        %         % sigma.SelfSim_from_LS.spectrum = 'energy';
-        %         sigma.SelfSim_from_LS.spectrum = 'abs_diff';
-        %     end
-        
-        % if strcmp(sigma.type_spectrum,'SelfSim_from_LS')
-        % Heterrogeenosu energy flux epsilon
-        sigma.hetero_energy_flux = false; % Best = true
-        
-        % if strcmp(sigma.type_spectrum,'SelfSim_from_LS')
-        % Heterrogeenosu energy flux epsilon
-        sigma.hetero_energy_flux_v2 = false; % Best = true (too)
-        
-%         if sigma.hetero_energy_flux_v2 
-%             if ~ sigma.hetero_energy_flux
-%                 error('sigma.hetero_energy_flux_v2 is always associated with sigma.hetero_energy_flux');
-%             else
-%                 sigma.hetero_energy_flux_averaging_after = true;
-%             end
-%         end
-        
-        % Modulation by local V L (estimated from the velocity and from
-        % thegradient of the velocity)
-        sigma.hetero_modulation = false;
-        
-        % Modulation by local V^2
-        sigma.hetero_modulation_V2 = false;
-        
-        % Modulation Smag
-        sigma.hetero_modulation_Smag = false;
-        
-        sigma.estim_k_LS = false;
-        
-        if strcmp(sigma.type_spectrum,'SelfSim_from_LS')
-            %             % sigma.estim_k_LS = true;
-            %             sigma.estim_k_LS = false;
-            
-            sigma.time_smooth.bool = false;
-            %             sigma.time_smooth.bool = true;
-            % sigma.time_smooth.tau = 24*3600 / 10;
-            %             sigma.time_smooth.tau = 24*3600 / 2;
-            sigma.time_smooth.tau = (64/resolution) * 24*3600 / 10 ;
-        end
-        
-        if strcmp(sigma.type_spectrum,'EOF') ...
-                || strcmp(sigma.type_spectrum,'Euler_EOF')
-            % Ratio between the Shanon resolution and filtering frequency used to
-            % filter the heterogenous diffusion coefficient
-            Smag.dealias_ratio_mask_LS = 1/8;
-            
-            % Nb day used to learn to EOFs
-            sigma.nbDayLearn= 50;
-            % sigma.nbDayLearn= 500;
-            
-            % Time period sampling for the learning data set
-            sigma.Delta_T_on_Delta_t = 8;
-            % sigma.Delta_T_on_Delta_t = 4500;
-            
-            % Number of EOF (use all EOFs if set to inf)
-            sigma.nb_EOF = 200; % ref
-            % sigma.nb_EOF = 2;
-            %             sigma.nb_EOF = 8000;
-            % sigma.nb_EOF = inf;
-        end
-        %     %if strcmp(sigma.type_spectrum,'SelfSim_from_LS')
-        %     if sigma.hetero_modulation & strcmp(sigma.type_spectrum,'SelfSim_from_LS')
-        if sigma.hetero_modulation | sigma.hetero_energy_flux ...
-                | sigma.hetero_modulation_V2 | sigma.hetero_modulation_Smag
-            % Ratio between the Shanon resolution and filtering frequency used to
-            % filter the heterogenous diffusion coefficient
-            % Smag.dealias_ratio_mask_LS = 1/8;
-%             Smag.dealias_ratio_mask_LS = 1/4;
-%             Smag.dealias_ratio_mask_LS = 1/2;
-            Smag.dealias_ratio_mask_LS = 1; % default value
-            
-            % Compute mudulation from filtered (kappa_min) fields
-            sigma.hetero_energy_flux_prefilter = true;
-            
-            % Filter noise modulations (1/4*kappa_min) fields
-            sigma.hetero_energy_flux_postfilter = true;
-            
-        end
-        % end
-        
-        if sigma.hetero_energy_flux
-            % Normalize before taking the power 1/3
-            sigma.hetero_energy_flux_averaging_after = true;
-            
-            % To filter negative part of the energy flux
-            
-%             sigma.kappa_VLS_on_kappa_LS = sigma.kappamin_on_kappamax / 2
-            sigma.kappa_VLS_on_kappa_LS = 1/8;
-%             sigma.kappa_VLS_on_kappa_LS = 1/12;
-%             sigma.kappa_VLS_on_kappa_LS = 1/16;
-%             sigma.kappa_VLS_on_kappa_LS = 1/4;
-%             sigma.kappa_VLS_on_kappa_LS = 1/4;
-            
-            % Maximum value considered 
-            sigma.kappaLSforEspi_on_kappamin = 1;
-        end
-        
-        if sigma.hetero_energy_flux_v2 
-            if ~ sigma.hetero_energy_flux
-                error('sigma.hetero_energy_flux_v2 is always associated with sigma.hetero_energy_flux');
-%             else
-%                 sigma.hetero_energy_flux_averaging_after = true;
-            end
-        end
-        
-        % Use a spatial derivation scheme for the herogeneous
-        % disspation
-        Smag.spatial_scheme = false;
-        
-        % Force sigma to be diveregence free
-        sigma.proj_free_div = true;
-        
-        if ( (sigma.Smag.bool + sigma.hetero_modulation + ...
-                sigma.hetero_energy_flux + sigma.hetero_modulation_V2 ...
-                + sigma.hetero_modulation_Smag) > 1 ) ...
-                || ( (sigma.Smag.bool + sigma.assoc_diff ) > 1 )
-            error('These parametrizations cannot be combined');
-        end
-        
-        if sigma.Smag.bool || sigma.assoc_diff
-            % Rate between the smallest wave number of the spatially-unresolved
-            % (not simulated) component of sigma dBt and the largest wave
-            % number of the simulation
-            sigma.kappaMinUnresolved_on_kappaShanon = 1;
-            
-            % Rate between the largest wave number of the spatially-unresolved
-            % (not simulated) component of sigma dBt and the largest wave
-            % number of the simulation
-            sigma.kappaMaxUnresolved_on_kappaShanon = 8;
-            
-        end
-        % For Smagorinsky-like diffusivity/viscosity or Hyper-viscosity,
-        if sigma.Smag.bool
-            % Smagorinsky energy budget (dissipation epsilon)
-            % without taking into account the noise intake
-            sigma.Smag.epsi_without_noise = false;
-            
-            % Ratio between the Shanon resolution and filtering frequency used to
-            % filter the heterogenous diffusion coefficient
-            % Smag.dealias_ratio_mask_LS = 1;
-            Smag.dealias_ratio_mask_LS = 1/8;
-            % Smag.dealias_ratio_mask_LS = 1/4;
-            %Smag.dealias_ratio_mask_LS = 1/2;
-            
-            %         % Ratio between the Shanon resolution cut-off ( = pi / sqrt( dx*dy) )
-            %         % and the targeted diffusion scale
-            %         % %        sigma.Smag.kappamax_on_kappad = 2;
-            %         % sigma.Smag.kappamax_on_kappad = 1;
-            
-            sigma.Smag.kappamax_on_kappad = 0.5; % (better(?))
-            % sigma.Smag.kappamax_on_kappad = 1 / 4;
-            %             sigma.Smag.kappamax_on_kappad = 1 / ...
-            %                 sigma.kappaMaxUnresolved_on_kappaShanon;
-            
-            %         % Factor in front of the additional constant dissipation
-            %         % Set to 0 for no additional constant dissipation
-            %         sigma.Smag.weight_cst_dissip = 0;
-            
-            % Heterogeneity of the noise
-            sigma.Smag.SS_vel_homo = false;
-            
-        end
-        
-        % Desactivate the noise
-        sigma.no_noise = false;
-        if sigma.no_noise
-            warning('There is no noise here');
-        end
-    end
-end
-
-% Number of realizations in the ensemble
-N_ech = 1;
-% N_ech = 200;
-% N_ech = sigma.nb_EOF;
-% N_ech = 2;
-% % N_ech = 600;
-% % ( N_ech=200 enables moments to converge when the parameter resolution is
-% %   set to 128 )
-% % ( N_ech is automatically set to 1 in deterministic simulations )
-if ~sigma.sto
-    N_ech = 1;
-else
-    N_ech
-end
-
-
-if nargin >0
-    bool_parfor = false;
-end
-
-%% Deterministic subgrid tensor
-
-if nargin == 0
-    % Viscosity
-    Lap_visco.bool = false;
-    
-    % % Smagorinsky-like viscosity
-    % Smag.bool = false;
-    % % HV.bool = false;
-    
-    % Hyper-viscosity
-    HV.bool = true;
-    
-    if HV.bool
-        % HV.order=4;
-        HV.order=8;
-    end
-    
-    % Smagorinsky-like diffusivity/viscosity or Hyper-viscosity
-    Smag.bool = false;
-    
-    % For Smagorinsky-like diffusivity/viscosity or Hyper-viscosity,
-    if Smag.bool
-        if Lap_visco.bool
-            
-            % Use a spatial derivation scheme for the herogeneous
-            % disspation
-            Smag.spatial_scheme = false;
-            
-            % Ratio between the Shanon resolution and filtering frequency used to
-            % filter the heterogenous diffusion coefficient
-            Smag.dealias_ratio_mask_LS = 1/8;
-            %     dealias_ratio_mask_LS = 1/8;
-            %     %dealias_ratio_mask_LS = 1/2;
-            warning('Redondant argument that for heterogeneous small-scale velocity')
-            
-            % Ratio between the Shanon resolution cut-off ( = pi / sqrt( dx*dy) )
-            % and the targeted diffusion scale
-            %     %     Smag.kappamax_on_kappad = 2;
-            %     % % Smag.kappamax_on_kappad = 1.5; % Better, still small oscillations or just pixels?
-            %     % %    %  Smag.kappamax_on_kappad = 1.1; % Stable mais petit artefact
-            %     Smag.kappamax_on_kappad = 1.1; % Stable mais petit artefact
-            %     %  d'aliasing
-            Smag.kappamax_on_kappad = 0.5;
-            % Smag.kappamax_on_kappad = 1; % Stable mais petit artefact
-            %  d'aliasing  % (better(?))
-            
-            % Factor in front of the additional constant dissipation
-            % Set to 0 for no additional constant dissipation
-            %    HV.weight_cst_dissip = 1/10;
-            %     HV.weight_cst_dissip = 1/10; % no aliasing
-            Smag.weight_cst_dissip = 0;
-        elseif HV.bool
-            % Ratio between the Shanon resolution and filtering frequency used to
-            % filter the heterogenous diffusion coefficient
-            Smag.dealias_ratio_mask_LS = 1;
-            warning('Redondant argument that for heterogeneous small-scale velocity')
-            
-            % Ratio between the Shanon resolution cut-off ( = pi / sqrt( dx*dy) )
-            % and the targeted diffusion scale
-            Smag.kappamax_on_kappad = 1.1;% still small oscillations or just pixels?
-            
-            % Factor in front of the additional constant dissipation
-            % Set to 0 for no additional constant dissipation
-            % % %     HV.weight_cst_dissip = 1/10;% bit of (stable) aliasing
-            %     % HV.weight_cst_dissip = 1/3; % still a bit of (stable) aliasing
-            %     HV.weight_cst_dissip = 1/3;
-            %     % HV.weight_cst_dissip = 0;
-            
-            Smag.weight_cst_dissip = 1/1;
-            % % %     HV.weight_cst_dissip = 1/10;% bit of (stable) aliasing
-        end
-    else
-        Smag.kappamax_on_kappad = 0;
-    end
-    %     % Smag.kappamax_on_kappad = 1.1;
-    %     % % Smag.kappad_on_kappamax = 1/2;
-    %     if Smag.bool
-    %         warning('This value needed to be tuned?')
-    %     end
-end
-
-%% Optional parameters
-
-% Compute velocity covariance and absolute diffusivity
-cov_and_abs_diff = false;
-
-% Choose to plot one-point one-time moments each day
-plot_moments = true;
-
-% Choose to plot the dissipation by scale
-plot_epsilon_k = false;
-if sigma.sto & sigma.hetero_energy_flux
-    plot_epsilon_k = true;
-end
-
-% Plot dissipations terms
-plot_dissip = true;
-
-% Begin simulation from a precomputed field?
-use_save = false
-% In this case, which day should be used as initialisation
-% day_save = 15;
-day_save = 100;
-% day_save = 126;
-if use_save
-    day_save
-end
-%day_save = 150
-
-dealias_method = 'exp';
-% [WIP] Method for mandatory de-aliasing of non-linear terms in
-% pseudospectral codes (advection and non-homogeneous stochastic diffusion)
-% - 'lowpass': same as in SQGMU 1;
-% - '2/3': the classical 2/3 rule (NB: produces Gibb's oscillations);
-% - 'exp': high-order exponential filter (Constantin et al., J. Sci.
-%   Comput. (2012)).
-
-% Boundaries conditions
-dirichlet = false;
-
-% Variance tensor a_H
-if stochastic_simulation
-    switch sigma.type_spectrum
-        case 'SelfSim_from_LS'
-            sigma.k_c = 0;
-        otherwise
-            switch dynamics
-                case 'SQG'
-                    switch resolution
-                        case 64
-                            % sigma.k_c = 1/(3e2) /6 % 1/(1800 meters)
-                            %  sigma.k_c = 1/(3e2) /10 % 1/(3000 meters)
-                            sigma.k_c = 1/(3e2) /4 % 1/(1200 meters)
-                            %                 % sigma.k_c = 1/(3e2) /3 % 1/(900 meters)
-                        case 128
-                            sigma.k_c = 1/(3e2) % 1/(300 meters)
-                    end
-                case '2D'
-                    error(...
-                        'The turbulence 2D is not stable under the action of noise');
-                    %             k_c = 1/(eps); % 1/(100 meters)
-                otherwise
-                    error('Unknown type of dynamics');
-            end
-            % a_H is calculated latter in the code using
-            % a_H = 2 * f_0 / k_c^2
-            % where f_0 is the Corilis frequency
-    end
-else
-    % If the simulation is deterministic, a_H = 0 and only one simulation
-    % is performed
-    sigma.k_c = inf; % And then a_H = 0
-    N_ech=1;
-    plot_moments = false;
-end
-
-% Spectrum slope of sigma dBt
+% Spectrum slope of the initial condition
+% (for type_data = 'Spectrum' only )
 switch dynamics
     case 'SQG'
-        sigma.slope_sigma = - 5/3;
-    case '2D'
-        sigma.slope_sigma = - 3;
-    otherwise
-        error('Unknown type of dynamics');
-end
-sigma.slope_sigma_ref = sigma.slope_sigma;
-% switch model.dynamics
-%     case 'SQG'
-%         sigma.slope_sigma_ref = -5/3;
-%     case '2D'
-%         sigma.slope_sigma_ref = -3;
-%     otherwise
-%         error('Unknown type of dynamics');
-% end
-if  sigma.sto & strcmp(sigma.type_spectrum,'BB')
-    sigma.slope_sigma = 0;
-    % elseif strcmp(sigma.type_spectrum,'SelfSim_from_LS')
-    %     sigma.slope_sigma = nan;
-end
-
-if nargin == 0
-    % Rate between the smallest and the largest wave number of sigma dBt
-    if sigma.sto
-        switch sigma.type_spectrum
-            case {'SelfSim_from_LS','EOF','Euler_EOF'}
-                
-                pre_estim_slope=1e-1;
-                %%
-                pre_5 = 5e-2;
-                sigma.kappamin_on_kappamax = ...
-                    (log(1-pre_5)/log(pre_estim_slope))^(2/HV.order);
-                %         sigma.kappamin_on_kappamax = ...
-                %             (log(1-pre_estim_slope)/log(pre_estim_slope))^(2/HV.order);
-                %%
-                %                 pre=1e-2;
-                %                 sigma.kappamin_on_kappamax = ...
-                %                     (log(1-pre)/log(pre_estim_slope))^(2/HV.order);
-                %%
-                sigma.kappamin_on_kappamax_estim_slope = ...
-                    (log(1-pre_estim_slope)/log(pre_estim_slope))...
-                    ^(2/HV.order);
-                
-                sigma.kappaLS_on_kappamax = 1/8;
-                
-            otherwise
-                switch resolution
-                    case  128
-                        sigma.kappamin_on_kappamax = 1/2;
-                    case 64
-                        sigma.kappamin_on_kappamax = 1/3;
-                    otherwise
-                        error('unknown');
-                end
-        end
-        
-        %         if strcmp(sigma.type_spectrum , 'SelfSim_from_LS')
-        %             if sigma.Smag.bool | ...
-        %                     Lap_visco.bool | ( HV.bool & (HV.order<=4) )
-        %                 sigma.kappamin_on_kappamax = 1/2;
-        %                 % sigma.kappamin_on_kappamax = 1/4;
-        %                 % sigma.kappamin_on_kappamax = 1/8;
-        %             elseif ( HV.bool & (HV.order==8) )
-        %                 switch resolution
-        %                     case  128
-        %                 % sigma.kappamin_on_kappamax = 1/2;
-        %                 pre=1e-2;
-        %                 pre_estim_slope=1e-1;
-        %                 sigma.kappamin_on_kappamax = ...
-        %                     (log(1-pre)/log(pre_estim_slope))^(2/HV.order)
-        %                 sigma.kappamin_on_kappamax_estim_slope = ...
-        %                     (log(1-pre_estim_slope)/log(pre_estim_slope))...
-        %                     ^(2/HV.order)
-        %                     case 64
-        %                 pre=1e-2;
-        %                 pre_estim_slope=1e-1;
-        %                 sigma.kappamin_on_kappamax = ...
-        %                     (log(1-pre)/log(pre_estim_slope))^(2/HV.order)
-        %                 sigma.kappamin_on_kappamax_estim_slope = ...
-        %                     (log(1-pre_estim_slope)/log(pre_estim_slope))...
-        %                     ^(2/HV.order)
-        % %                 sigma.kappamin_on_kappamax = 0.45;
-        % %                 % sigma.kappamin_on_kappamax = 1/3;
-        %                     otherwise
-        %                         error('unknown');
-        %                 end
-        %             else
-        %                 warning('kappamin_on_kappamax may be inapropriate');
-        %                 sigma.kappamin_on_kappamax = 1/2;
-        %                 % sigma.kappamin_on_kappamax = 1/4;
-        %                 % sigma.kappamin_on_kappamax = 1/8;
-        %             end
-        %
-        %             sigma.kappaLS_on_kappamax = 1/8;
-        %         else
-        %             switch resolution
-        %                 case  128
-        %                     sigma.kappamin_on_kappamax = 1/2;
-        %                 case 64
-        %                     sigma.kappamin_on_kappamax = 1/3;
-        %                 otherwise
-        %                     error('unknown');
-        %             end
-        %
-        % %             %kappamin_on_kappamax = 1/32;
-        % %             sigma.kappamin_on_kappamax = 1/2;
-        % %             % sigma.kappamin_on_kappamax = 1/128;
-        % %             %         sigma.slope_sigma = - 5;
-        % %             % warning('THIS PARAMETER NEEDS TO BE CHANGED -- TEST');
-        %
-        %             sigma.kappaLS_on_kappamax = 1/8;
-        %         end
-        
-        % Rate between the largest wave number of sigma dBt and the largest wave
-        % number of the simulation
-        sigma.kappamax_on_kappaShanon = 1;
-    end
-end
-
-% Spectrum slope of the initial condition (if type_data = 'Spectrum' )
-switch dynamics
-    case 'SQG'
-%         slope_b_ini = 5/3;
         slope_b_ini = - 5/3;
     case '2D'
         slope_b_ini = - 3;
@@ -619,26 +71,138 @@ switch dynamics
         error('Unknown type of dynamics');
 end
 
+% Begin simulation from a precomputed field?
+use_save = false
+% In this case, which day should be used as initialisation
+day_save = 100;
+
+%% Forcing of the flow
+
+% Forcing or not
+forcing = false;
+
+% Type de forcing
+% forcing_type = 'Kolmogorov';
+% % Forcing of the following type
+% % F = ampli_forcing * odg_b * 1/T_caract ...
+% %             * cos( 2 freq_f(1) pi x/L_x + 2 freq_f(2) pi y/L_y )
+% % F = ampli_forcing * odg_b * 1/T_caract * sin( 2 freq_f pi y/L_y )
+forcing_type = 'Spring';
+% % Forcing of the following type
+% % F = -(1/tau)*b + ampli_forcing * odg_b * 1/T_caract ...
+% %         * sin( 2 freq_f(1) pi x/L_x )* sin( 2 freq_f pi y/L_y )
+
+% Amplitude of the forcing
+ampli_forcing = 10;
+
+% Spatal frequency of the forcing
+freq_f = [3 2];
+
+%% Stochastic parameterization of v'= sigma dBt/dt
+
+% Deterministic or random model
+stochastic_simulation = false;
+sigma.sto = stochastic_simulation;
+% Usual SQG model (stochastic_simulation=false)
+% or SQG_MU model (stochastic_simulation=true)
+
+if sigma.sto
+    % Type of spectrum for v' = sigma dBt/dt
+    % sigma.type_spectrum = 'Band_Pass_w_Slope'; 
+    % %     spectrum ~ (cst * k^r) for km < k < kM
+    % %     proposed and used in Resseguier et al., 2017b, 
+    % %         https://doi.org/10.1080/03091929.2017.1312101 
+    % %     used in Resseguier et al., 2020b, 
+    % %         https://doi.org/10.1007/s11831-020-09437-x 
+    sigma.type_spectrum = 'SelfSim_from_LS'
+    % %     ADSD method
+    %       Sigma computed from self similarities from the large scales
+    % %     proposed (section 2.1.1) and used in Resseguier et al., 2020a, 
+    % %         https://doi.org/10.1080/03091929.2017.1312101 
+    % %     used in Resseguier et al., 2020b, 
+    % %         https://doi.org/10.1007/s11831-020-09437-x 
+    % sigma.type_spectrum = 'EOF';
+    % %     Empirical Orthogonal Functions (EOF)
+    % %     ( Need a pre-computed EOF file )
+    % %     used (section 2.2) in Resseguier et al., 2020a, 
+    % %         https://doi.org/10.5194/npg-27-209-2020
+    % %     proposed and used by Cotter et al., 2019, 2020a,b,c
+    % %         https://doi.org/10.1137/18M1167929
+    % %         arXiv:1802.05711 ; arXiv:1907.11884
+    % %         https://doi.org/10.1007/s10955-020-02524-0
+    % sigma.type_spectrum = 'Low_Pass_w_Slope';
+    % %     Spectrum cst for k<km 
+    % %     and  spectrum = (cst * k^r) for k>km
+    % sigma.type_spectrum = 'Low_Pass_streamFct_w_Slope';
+    % %     Matern covariance for the streamfunction
+    % %     spectrum = cst. * k^2 .* ( 1 + (k/km)^2 )^s )
+    % %     So, spectrum ~ cst. * k^2 for k<<km 
+    % %     and spectrum ~ cst. * k^r for k>>km 
+    % sigma.type_spectrum = 'BB';
+    % %     White noise : spectrum = cst
+    
+    % v' heterogenity 
+    % Heterogeneity based on the energy flux epsilon espilon_F
+    sigma.hetero_energy_flux = false; 
+    % Or Heterogeneity based on the Smagorinsky energy flux 
+    %   (i.e. the dissipation espilon_D)
+    sigma.hetero_modulation_Smag = false;
+    % %     both heterogenity methods are proposed (section 2.1.2)
+    % %     and used in Resseguier et al., 2020a, 
+    % %         https://doi.org/10.1080/03091929.2017.1312101 
+end
+
+% Other sigma parameters (do not change)
+Default_sigma_param
+
+% Number of realizations in the ensemble
+N_ech = 1;
+% %     N_ech is automatically set to 1 in deterministic simulations.
+if ~sigma.sto
+    N_ech = 1;
+end
+
+%% Deterministic subgrid tensor
+
+% (Laplacian) viscosity
+Lap_visco.bool = false;
+
+% Hyper-viscosity
+HV.bool = true;
+
+% Smagorinsky-like diffusivity/viscosity or Hyper-viscosity
+Smag.bool = false;
+
+% Other deterministic subgrid tensor parameters (do not change)
+Default_deter_subgrid_tensor
+
+%% Plot parameters
+
+% Choose to plot the dissipation by scale
+plot_epsilon_k = false;
+if sigma.sto && sigma.hetero_energy_flux
+    plot_epsilon_k = true;
+end
+
+% Choose to plot dissipations terms 
+plot_dissip = false;
+
+%% Additional parameters
+
+% Additional parameters for v'= sigma dBt/dt (do not change)
+Additional_sigma_param
+
 % Physical parameters
 model = fct_physical_param(dynamics);
 
-% Gather parameters in the structure model
+%% Gather parameters in a structure called "model"
 model.sigma = sigma;
-if sigma.sto
-    eval(['model.sigma.fct_tr_a = @(m,k1,k2) fct_norm_tr_a_theo_' ...
-        model.sigma.type_spectrum '(m,k1,k2);']);
-    % eval(['model.sigma.fct_tr_a = @(m,k1,k2,alpha) fct_norm_tr_a_theo_' ...
-    %     model.sigma.type_spectrum '(m,k1,k2,alpha);']);
-    % model.sigma.slope_sigma = slope_sigma;
-    % model.sigma.kappamin_on_kappamax = kappamin_on_kappamax;
-end
 if strcmp(type_data,'Spectrum')
     model.slope_b_ini = slope_b_ini;
 end
 model.dynamics=dynamics;
 model.type_data=type_data;
 model.advection.N_ech=N_ech;
-% model.sigma.k_c = k_c;
 model.advection.advection_duration=advection_duration;
 model.advection.plot_epsilon_k = plot_epsilon_k;
 model.advection.plot_dissip = plot_dissip;
@@ -648,15 +212,13 @@ model.advection.forcing.ampli_forcing = ampli_forcing;
 model.advection.forcing.freq_f = freq_f;
 model.advection.forcing.forcing_type = forcing_type;
 model.advection.HV = HV;
-model.advection.cov_and_abs_diff = cov_and_abs_diff;
+model.advection.cov_and_abs_diff = false;
 model.advection.Lap_visco = Lap_visco;
 model.advection.Smag = Smag;
 model.advection.use_save = use_save;
 model.advection.day_save = day_save;
 model.grid.dealias_method = dealias_method; %de-aliasing method
-%model.Smag.dealias_ratio_mask_LS = dealias_ratio_mask_LS;
 model.plots = plots_bool;
-
 if model.sigma.sto
     if ( strcmp(model.sigma.type_spectrum,'EOF') || ...
             strcmp(model.sigma.type_spectrum,'Euler_EOF') ) ...
@@ -674,32 +236,14 @@ rng('default'); %  The default settings are the Mersenne Twister with seed 0.
 [fft_buoy,model] = fct_buoyancy_init(model,resolution);
 
 %% Advection
-if bool_parfor
-    [fft_buoy_final, model] = fct_fft_advection_sto_parfor(model, fft_buoy);
-elseif bool_mat
-    [fft_buoy_final, model] = fct_fft_advection_sto_mat(model, fft_buoy);
-else
-    [fft_buoy_final, model] = fct_fft_advection_sto(model, fft_buoy);
-    %     warning('BIDOUILLE!!!!')
-    %     [fft_buoy_final, model] = fct_fft_advection_sto_for(model, fft_buoy);
-end
-
+[fft_buoy_final, model] = fct_fft_advection_sto_mat(model, fft_buoy);
 
 %% Post-process plots
-
-last_day_plot_qq = 120;
-%resolution_HR = 512
-% resolution_HR = 1024
-% resolution_HR = 16 * resolution
-% resolution_HR = 4 * resolution
-resolution_HR = 8 * resolution
 if ~ use_save
     first_day = 0;
     day_save = 0;
 else
     first_day = 100;
-%     first_day = 101;
-    % first_day = day_save;
     day_save = 101;
 end
 
@@ -710,7 +254,4 @@ if plots_bool
         model.advection.Lap_visco,model.advection.HV,...
         model.advection.Smag,model.advection.N_ech,...
         first_day,advection_duration,day_save);
-%         first_day,last_day_plot_qq);
 end
-
-resolution_HR

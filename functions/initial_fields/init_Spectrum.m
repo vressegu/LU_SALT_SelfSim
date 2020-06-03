@@ -98,21 +98,10 @@ end
 function t = fct_unity_approx_(N_t)
 % [TODO] fix different cases
 % Approximation of unity
-%
-% sslop=4;
-% t=ones(1,N_t);
-% t(end-sslop+1:end)=(-tanh(-3 + 6/(sslop-1)*(0:(sslop-1)) ) +1)/2;
+
 sslop=8;
 t=ones(1,N_t);
 t(1:sslop)=(tanh(-3 + 6/(sslop-1)*(0:(sslop-1)) )+1)/2;
 t(end-sslop+1:end)=(-tanh(-3 + 6/(sslop-1)*(0:(sslop-1)) ) +1)/2;
 end
 
-
-% function t = fct_unity_approx_(N_t)
-% % Approximation of unity
-% %
-% sslop=4;
-% t=ones(1,N_t);
-% t(end-sslop+1:end)=(-tanh(-3 + 6/(sslop-1)*(0:(sslop-1)) ) +1)/2;
-% end

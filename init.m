@@ -4,7 +4,6 @@
 
 % Cleaning
 clear;
-% clear all;
 close all;clc;
 
 % Debug
