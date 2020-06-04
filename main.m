@@ -239,6 +239,7 @@ rng('default'); %  The default settings are the Mersenne Twister with seed 0.
 [fft_buoy_final, model] = fct_fft_advection_sto_mat(model, fft_buoy);
 
 %% Post-process plots
+warning('You need to pre-compute a deterministic reference for this part of the code');
 if ~ use_save
     first_day = 0;
     day_save = 0;
