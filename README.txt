@@ -17,4 +17,4 @@ https://doi.org/10.1080/03091929.2017.1312101
 
 ## Resources / contact
 
-* [V. Resseguier](http://www.irisa.fr/fluminance/team/Valentin.Resseguier.html)
+* [V. Resseguier](https://sites.google.com/view/valentinresseguier)
